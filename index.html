@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atropa Token Family Explorer</title>
+    <link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body class="dark-mode">
+    <div class="container">
+        <h1>Atropa Token Family Explorer</h1>
+        <p class="subtitle">
+            Enter a Pulsechain token address below to find its parent token using the official contract.
+        </p>
+        <a class="docs-link prominent" href="https://treasury.gitbook.io/docs" target="_blank" rel="noopener">📖 Treasury Docs</a>
+
+        <section class="parent-search">
+            <h2>Token Search</h2>
+            <p>Look up information about tokens created by the factory using address, name, or symbol.</p>
+            <input type="text" id="parent-search-input" placeholder="Enter Token Address" />
+            <button id="parent-search-button">Find Parent</button>
+            <div id="queried-parent-info" style="display: none;">
+                <h3>Parent Token Info</h3>
+                <p>Parent Address: <span id="queried-parent-address"></span></p>
+                <p>Parent Name: <span id="queried-parent-name"></span></p>
+                <p>Parent Symbol: <span id="queried-parent-symbol"></span></p>
+                <p><a id="midgard-explorer-link" href="#" target="_blank" style="display:none;">View on Midgard Explorer</a></p>
+            </div>
+        </section>
+
+        <section class="info-sections">
+            <div class="info-box">
+                <h3>Relationship Tracking</h3>
+                <p>Track parent-child relationships between tokens to understand their hierarchical structure.</p>
+            </div>
+            <div class="info-box">
+                <h3>Visualization</h3>
+                <p>Visualize token relationship networks to better understand token families. (Coming soon)</p>
+            </div>
+            <div class="info-box">
+                <h3>Explorer Integration</h3>
+                <p>Direct links to Midgard Explorer for each token to view detailed blockchain information.</p>
+            </div>
+            <div class="info-box">
+                <h3>About</h3>
+                <p>
+                    The Atropa Token Family Explorer is a specialized tool for tracking tokens created by the token factory at address
+                    <code>0x394c3D5990cEfC7Be36B82FDB07a7251ACe61cc7</code> on the PulseChain network.
+                </p>
+                <p>
+                    The token factory maintains parent-child relationships through the <code>GetStandardTokenParent</code> function,
+                    which takes a token address and returns its parent address.
+                </p>
+                <p>
+                    This tool allows you to search for tokens created by wallet <code>0xBF182955401aF3f2f7e244cb31184E93E74a2501</code> and explore their parent-child relationships.
+                </p>
+            </div>
+        </section>
+
+        <button id="toggle-theme">Toggle Light/Dark Mode</button>
+
+        <footer style="margin-top: 24px; text-align: center; font-size: 0.9rem; color: var(--text-color);">
+            <p>More links: <a href="https://linktr.ee/affection_pls" target="_blank" rel="noopener" style="color: var(--primary-color); text-decoration: underline;">Affection Linktree</a></p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
