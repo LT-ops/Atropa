@@ -1,13 +1,13 @@
 // Initialize Supabase client
 // You must include the Supabase JS client in your HTML: 
 // <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-const SUPABASE_URL = 'https://zitdqmwrgignwqwjreae.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppdGRxbXdyZ2lnbndxd2pyZWFlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzMzExODYsImV4cCI6MjA2MTkwNzE4Nn0.9qz8wH4haWaGT4VG5yJEb93BKRQDcJZEbaXVCVm4NFQ';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'https://uevfxvbgaeesomexyogf.supabase.co';
+const SUPABASE_KEY = '..eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVldmZ4dmJnYWVlc29tZXh5b2dmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NDUyMTksImV4cCI6MjA2NDAyMTIxOX0.iRzDpthPKvmWUNdwSMAZD5R6Xt3eeDUxiAGnBYviom4..';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); // <--- use window.supabase
 
 // Fetch token data from Supabase by address
 async function fetchTokenFromSupabase(tokenAddress) {
-    const { data, error } = await supabase
+    const { data, error } = await sb
         .from('tokens')
         .select('address, name, symbol, parent_address')
         .eq('address', tokenAddress.toLowerCase())
@@ -50,7 +50,27 @@ const pulsechainParentABI = [
 const pulsechainParentAddress = "0x394c3D5990cEfC7Be36B82FDB07a7251ACe61cc7";
 const PULSECHAIN_RPC = "https://rpc.pulsechain.com"; // Replace with actual endpoint if needed
 
-// Handle the parent token search
+// Add a loading indicator element to the DOM if not present
+function ensureLoadingIndicator() {
+    let loading = document.getElementById('loading-indicator');
+    if (!loading) {
+        loading = document.createElement('div');
+        loading.id = 'loading-indicator';
+        loading.style.display = 'none';
+        loading.style.position = 'fixed';
+        loading.style.top = '10px';
+        loading.style.right = '10px';
+        loading.style.background = '#222';
+        loading.style.color = '#fff';
+        loading.style.padding = '8px 16px';
+        loading.style.borderRadius = '6px';
+        loading.style.zIndex = 1000;
+        loading.textContent = 'Loading...';
+        document.body.appendChild(loading);
+    }
+    return loading;
+}
+
 async function handleParentSearch() {
     const input = document.getElementById('parent-search-input');
     const outputDiv = document.getElementById('queried-parent-info');
@@ -58,6 +78,8 @@ async function handleParentSearch() {
     const outputName = document.getElementById('queried-parent-name');
     const outputSymbol = document.getElementById('queried-parent-symbol');
     const explorerLink = document.getElementById('midgard-explorer-link');
+    const loading = ensureLoadingIndicator();
+    const subtitle = document.querySelector('.subtitle');
 
     if (!input || !outputDiv || !outputAddress || !outputName || !outputSymbol || !explorerLink) {
         alert("Required UI elements for parent search not found.");
@@ -67,8 +89,29 @@ async function handleParentSearch() {
     let tokenAddress = input.value.trim();
     outputDiv.style.display = "none";
     outputAddress.textContent = "";
-// Try to fetch token data from Supabase first
-    const supabaseToken = await fetchTokenFromSupabase(tokenAddress);
+    outputName.textContent = "";
+    outputSymbol.textContent = "";
+    explorerLink.style.display = "none";
+    explorerLink.href = "#";
+    if (subtitle) subtitle.textContent = "Enter a Pulsechain token address below to find its parent token using the official contract.";
+
+    if (!tokenAddress) {
+        alert("Please enter a token address.");
+        return;
+    }
+
+    loading.style.display = 'block';
+    loading.textContent = 'Searching...';
+
+    // Try to fetch token data from Supabase first
+    let supabaseToken = null;
+    let supabaseError = null;
+    try {
+        supabaseToken = await fetchTokenFromSupabase(tokenAddress);
+    } catch (e) {
+        supabaseError = e;
+    }
+
     if (supabaseToken) {
         outputDiv.style.display = "block";
         outputAddress.textContent = supabaseToken.parent_address || "No parent found";
@@ -80,20 +123,25 @@ async function handleParentSearch() {
         } else {
             explorerLink.style.display = "none";
         }
-        return; // Skip on-chain lookup if found in Supabase
-    }
-    outputName.textContent = "";
-    outputSymbol.textContent = "";
-    explorerLink.style.display = "none";
-    explorerLink.href = "#";
-
-    tokenAddress = tokenAddress.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
-
-    if (!tokenAddress) {
-        alert("Please enter a token address.");
+        if (subtitle) subtitle.textContent = "Result from Supabase (fast, accurate)";
+        loading.style.display = 'none';
         return;
     }
+
+    if (supabaseError) {
+        outputDiv.style.display = "block";
+        outputAddress.textContent = "Error: Could not connect to Supabase.";
+        outputName.textContent = "";
+        outputSymbol.textContent = "";
+        explorerLink.style.display = "none";
+        if (subtitle) subtitle.textContent = "Supabase error. Trying on-chain lookup...";
+    }
+
+    // Clean up address
+    tokenAddress = tokenAddress.replace(/[\s\u200B-\u200D\uFEFF]/g, '');
+
     if (typeof ethers === "undefined") {
+        loading.style.display = 'none';
         alert("ethers.js not loaded.");
         return;
     }
@@ -102,12 +150,15 @@ async function handleParentSearch() {
             tokenAddress = ethers.utils.getAddress(tokenAddress);
             console.log("Checksummed address:", tokenAddress);
         } catch {
+            loading.style.display = 'none';
             alert("Invalid address format. Please check for typos or extra spaces.");
             return;
         }
     }
 
+    // On-chain lookup
     try {
+        loading.textContent = 'Searching on-chain...';
         const provider = new ethers.providers.JsonRpcProvider(PULSECHAIN_RPC);
         const contract = new ethers.Contract(pulsechainParentAddress, pulsechainParentABI, provider);
         const parent = await contract.GetStandardTokenParent(tokenAddress);
@@ -132,23 +183,23 @@ async function handleParentSearch() {
             outputSymbol.textContent = parentSymbol;
             explorerLink.style.display = "inline";
             explorerLink.href = `https://midgard.wtf/token/${parent}`;
+            if (subtitle) subtitle.textContent = "Result from on-chain lookup (slower, may be incomplete)";
         } else {
             outputAddress.textContent = "No parent found";
+            outputName.textContent = "";
+            outputSymbol.textContent = "";
+            explorerLink.style.display = "none";
+            if (subtitle) subtitle.textContent = "No parent found for this token.";
         }
     } catch (err) {
         outputDiv.style.display = "block";
-        if (err.code === 'CALL_EXCEPTION') {
-            if (err.reason) {
-                outputAddress.textContent = "Error: " + err.reason;
-            } else if (err.data) {
-                outputAddress.textContent = "The token is not recognized or has no parent token.";
-                console.info("Call reverted with data:", err.data);
-            } else {
-                outputAddress.textContent = "Error: Call reverted (no reason provided)";
-            }
-        } else {
-            outputAddress.textContent = "Error: " + (err.message || "Could not query parent token.");
-        }
+        outputAddress.textContent = "Error: " + (err.message || "Could not query parent token.");
+        outputName.textContent = "";
+        outputSymbol.textContent = "";
+        explorerLink.style.display = "none";
+        if (subtitle) subtitle.textContent = "Error during on-chain lookup.";
         console.error("Error querying parent token:", err);
+    } finally {
+        loading.style.display = 'none';
     }
 }
